@@ -1,0 +1,81 @@
+name: Build Android APK
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.6'
+
+    - name: Prepare and Build APK
+      run: |
+        # 1. Ensure gradlew is executable
+        if [ ! -f "gradlew" ]; then
+          gradle wrapper
+        fi
+        chmod +x gradlew
+
+        # 2. If files are all in one folder, arrange them for Android build:
+        if [ ! -d "app/src/main" ]; then
+          echo "Organizing files into Android build structure..."
+          mkdir -p app/src/main/java/dz/mesrs/webetu/automeals/{core/security,core/util,core/notifications,data/model,data/local/entity,data/local/dao,data/local/database,data/local/datastore,domain/provider/official,domain/provider/assisted,domain/provider/mock,domain/repository,domain/usecase,domain/scheduler,work,ui/theme,ui}
+          mkdir -p app/src/main/res/values app/src/main/res/drawable app/src/main/res/mipmap-anydpi-v26 app/src/test/java/dz/mesrs/webetu/automeals
+
+          cp -f MainActivity.kt app/src/main/java/dz/mesrs/webetu/automeals/ui/ 2>/dev/null || true
+          cp -f Theme.kt app/src/main/java/dz/mesrs/webetu/automeals/ui/theme/ 2>/dev/null || true
+          cp -f WebetuAutoMealsApp.kt app/src/main/java/dz/mesrs/webetu/automeals/ 2>/dev/null || true
+          cp -f KeystoreSecretManager.kt SecurityAudit.kt app/src/main/java/dz/mesrs/webetu/automeals/core/security/ 2>/dev/null || true
+          cp -f TimeUtils.kt Result.kt app/src/main/java/dz/mesrs/webetu/automeals/core/util/ 2>/dev/null || true
+          cp -f MealNotificationManager.kt app/src/main/java/dz/mesrs/webetu/automeals/core/notifications/ 2>/dev/null || true
+          cp -f Enums.kt ScheduleSettings.kt app/src/main/java/dz/mesrs/webetu/automeals/data/model/ 2>/dev/null || true
+          cp -f BookingAttemptEntity.kt app/src/main/java/dz/mesrs/webetu/automeals/data/local/entity/ 2>/dev/null || true
+          cp -f BookingAttemptDao.kt app/src/main/java/dz/mesrs/webetu/automeals/data/local/dao/ 2>/dev/null || true
+          cp -f AppDatabase.kt app/src/main/java/dz/mesrs/webetu/automeals/data/local/database/ 2>/dev/null || true
+          cp -f SchedulePreferencesDataStore.kt app/src/main/java/dz/mesrs/webetu/automeals/data/local/datastore/ 2>/dev/null || true
+          cp -f OfficialIntegrationProvider.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/provider/official/ 2>/dev/null || true
+          cp -f AssistedBookingProvider.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/provider/assisted/ 2>/dev/null || true
+          cp -f MockMealBookingProvider.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/provider/mock/ 2>/dev/null || true
+          cp -f MealBookingProvider.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/provider/ 2>/dev/null || true
+          cp -f BookingRepository.kt ScheduleSettingsRepository.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/repository/ 2>/dev/null || true
+          cp -f UseCases.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/usecase/ 2>/dev/null || true
+          cp -f MealSchedulingManager.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/scheduler/ 2>/dev/null || true
+          cp -f MealBookingWorker.kt BootReceiver.kt app/src/main/java/dz/mesrs/webetu/automeals/work/ 2>/dev/null || true
+          cp -f AllTests.kt app/src/test/java/dz/mesrs/webetu/automeals/ 2>/dev/null || true
+
+          cp -f AndroidManifest.xml app/src/main/ 2>/dev/null || true
+          cp -f colors.xml strings.xml themes.xml app/src/main/res/values/ 2>/dev/null || true
+          cp -f ic_launcher_foreground.xml app/src/main/res/drawable/ 2>/dev/null || true
+          cp -f ic_launcher_foreground.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml 2>/dev/null || true
+          cp -f app-build.gradle.kts app/build.gradle.kts 2>/dev/null || true
+        fi
+
+        # 3. Assemble the Debug APK
+        ./gradlew assembleDebug --no-daemon --stacktrace || gradle assembleDebug --no-daemon --stacktrace
+
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: WebetuAutoMeals-debug-APK
+        path: app/build/outputs/apk/debug/app-debug.apk
+        if-no-files-found: error

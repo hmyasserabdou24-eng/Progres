@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_primary_dark">#123E73</color>
+    <color name="brand_primary_light">#EAF2FB</color>
+    <color name="brand_background">#F7F9FC</color>
+    <color name="brand_text_dark">#172B4D</color>
+    <color name="brand_text_secondary">#5E6C84</color>
+    <color name="brand_surface">#FFFFFF</color>
+    <color name="status_success">#1B8738</color>
+    <color name="status_failure">#D32F2F</color>
+    <color name="status_unconfirmed">#757575</color>
+    <color name="status_warning">#D97706</color>
+</resources>

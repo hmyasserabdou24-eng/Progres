@@ -8,6 +8,7 @@ import dz.mesrs.webetu.automeals.domain.provider.BookingRequest
 import dz.mesrs.webetu.automeals.domain.provider.MealBookingProvider
 import dz.mesrs.webetu.automeals.domain.provider.ProviderResult
 
+// Test-only provider. It is never wired into the app (see WebetuAutoMealsApp).
 class MockMealBookingProvider(
     var simulatedConnectionAvailable: Boolean = true,
     var simulatedSessionValid: Boolean = true,

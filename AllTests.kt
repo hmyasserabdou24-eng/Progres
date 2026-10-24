@@ -4,7 +4,6 @@ import dz.mesrs.webetu.automeals.core.security.SecurityAudit
 import dz.mesrs.webetu.automeals.data.model.*
 import dz.mesrs.webetu.automeals.domain.provider.*
 import dz.mesrs.webetu.automeals.domain.provider.mock.MockMealBookingProvider
-import dz.mesrs.webetu.automeals.domain.provider.official.OfficialIntegrationProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test

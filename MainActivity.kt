@@ -3,13 +3,10 @@ package dz.mesrs.webetu.automeals.ui
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.lifecycle.viewmodel.compose.viewModel
 import dz.mesrs.webetu.automeals.ui.theme.WebetuAutoMealsTheme
 
 class MainActivity : ComponentActivity() {
@@ -17,10 +14,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             WebetuAutoMealsTheme {
-                Scaffold { padding ->
-                    Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                        Text("Webetu Auto Meals — نظام جدولة وحجز الوجبات الجامعية")
-                    }
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    val vm: MainViewModel = viewModel(factory = MainViewModel.Factory)
+                    NotificationPermissionRequest()
+                    WebetuRoot(vm)
                 }
             }
         }

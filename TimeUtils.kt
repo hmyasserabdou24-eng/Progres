@@ -11,7 +11,7 @@ import java.util.Locale
 object TimeUtils {
     val ALGIERS_ZONE_ID: ZoneId = ZoneId.of("Africa/Algiers")
     private val DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ENGLISH)
-    private val DISPLAY_DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale("ar"))
+    private val DISPLAY_DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ENGLISH)
 
     fun nowInAlgiers(): ZonedDateTime = ZonedDateTime.now(ALGIERS_ZONE_ID)
     fun todayInAlgiers(): LocalDate = nowInAlgiers().toLocalDate()
@@ -35,7 +35,7 @@ object TimeUtils {
         val startDate = LocalDate.ofEpochDay(startDateEpochDay)
         val endDate = endDateEpochDay?.let { LocalDate.ofEpochDay(it) }
 
-        var candidateDate = if (today.isBefore(startDate)) startDate else today
+        val candidateDate = if (today.isBefore(startDate)) startDate else today
 
         for (offset in 0..14) {
             val checkDate = candidateDate.plusDays(offset.toLong())

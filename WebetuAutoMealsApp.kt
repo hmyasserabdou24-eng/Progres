@@ -2,7 +2,6 @@ package dz.mesrs.webetu.automeals
 
 import android.app.Application
 import dz.mesrs.webetu.automeals.core.notifications.MealNotificationManager
-import dz.mesrs.webetu.automeals.core.security.KeystoreSecretManager
 import dz.mesrs.webetu.automeals.data.local.database.AppDatabase
 import dz.mesrs.webetu.automeals.data.local.datastore.SchedulePreferencesDataStore
 import dz.mesrs.webetu.automeals.domain.provider.MealBookingProvider
@@ -17,9 +16,13 @@ import dz.mesrs.webetu.automeals.domain.usecase.EmergencyStopUseCase
 import dz.mesrs.webetu.automeals.domain.usecase.GetDashboardDataUseCase
 import dz.mesrs.webetu.automeals.domain.usecase.SaveScheduleSettingsUseCase
 import dz.mesrs.webetu.automeals.domain.usecase.TriggerMealBookingUseCase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class WebetuAutoMealsApp : Application() {
-    lateinit var keystoreSecretManager: KeystoreSecretManager; private set
     lateinit var notificationManager: MealNotificationManager; private set
     lateinit var database: AppDatabase; private set
     lateinit var dataStore: SchedulePreferencesDataStore; private set
@@ -34,9 +37,10 @@ class WebetuAutoMealsApp : Application() {
     lateinit var clearHistoryUseCase: ClearHistoryUseCase; private set
     lateinit var emergencyStopUseCase: EmergencyStopUseCase; private set
 
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate() {
         super.onCreate()
-        keystoreSecretManager = KeystoreSecretManager()
         notificationManager = MealNotificationManager(this)
         database = AppDatabase.getInstance(this)
         dataStore = SchedulePreferencesDataStore(this)
@@ -50,5 +54,13 @@ class WebetuAutoMealsApp : Application() {
         triggerMealBookingUseCase = TriggerMealBookingUseCase(bookingRepository, bookingProvider, notificationManager)
         clearHistoryUseCase = ClearHistoryUseCase(bookingRepository)
         emergencyStopUseCase = EmergencyStopUseCase(settingsRepository, schedulingManager)
+
+        // WorkManager jobs only cover the next few days, so re-arm them whenever the app starts.
+        appScope.launch {
+            val settings = settingsRepository.settingsFlow.first()
+            if (settings.isScheduleActive && settings.isValid) {
+                schedulingManager.syncSchedule(settings)
+            }
+        }
     }
 }

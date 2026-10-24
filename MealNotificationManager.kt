@@ -9,7 +9,6 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import dz.mesrs.webetu.automeals.ui.MainActivity
 
 class MealNotificationManager(private val context: Context) {
     companion object {

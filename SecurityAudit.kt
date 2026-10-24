@@ -5,11 +5,11 @@ import android.util.Log
 object SecurityAudit {
     private const val TAG = "WebetuAutoMeals"
     private val SENSITIVE_PATTERNS = listOf(
-        Regex("(?i)password["']?\\s*[:=]\\s*["']?([^"'\\s,]+)"),
-        Regex("(?i)bearer\\s+[a-zA-Z0-9._\\-]+"),
-        Regex("(?i)token["']?\\s*[:=]\\s*["']?([^"'\\s,]+)"),
-        Regex("(?i)secret["']?\\s*[:=]\\s*["']?([^"'\\s,]+)"),
-        Regex("(?i)cookie["']?\\s*[:=]\\s*["']?([^"'\\s,]+)")
+        Regex("""(?i)password["']?\s*[:=]\s*["']?([^"'\s,]+)"""),
+        Regex("""(?i)bearer\s+[a-zA-Z0-9._\-]+"""),
+        Regex("""(?i)token["']?\s*[:=]\s*["']?([^"'\s,]+)"""),
+        Regex("""(?i)secret["']?\s*[:=]\s*["']?([^"'\s,]+)"""),
+        Regex("""(?i)cookie["']?\s*[:=]\s*["']?([^"'\s,]+)""")
     )
 
     fun sanitize(message: String): String {

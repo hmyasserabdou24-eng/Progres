@@ -7,85 +7,266 @@ on:
 
 jobs:
   build:
-    name: Build APK
+    name: Build Debug APK
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
+      - name: Restore Android project layout and fix sources
+        run: |
+          PKG="app/src/main/java/dz/mesrs/webetu/automeals"
+          mkdir -p "$PKG/domain/model" "$PKG/domain/repository" "$PKG/data/local" "$PKG/data/remote" "$PKG/data/repository" "$PKG/worker" "$PKG/ui/theme" "$PKG/ui/screens"
+          mkdir -p "app/src/main/res/values" "app/src/main/res/xml" "app/src/main/res/drawable"
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+          cat << 'EOF' > settings.gradle.kts
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "WebetuAutoMeals"
+          include(":app")
+          EOF
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.6'
+          cat << 'EOF' > build.gradle.kts
+          plugins {
+              id("com.android.application") version "8.5.2" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+              id("com.google.devtools.ksp") version "1.9.24-1.0.20" apply false
+          }
+          EOF
 
-    - name: Prepare and Build APK
-      run: |
-        # 1. إنشاء ملف gradlew تلقائياً في حال عدم وجوده وضبط الصلاحيات
-        if [ ! -f "gradlew" ]; then
-          echo "Generating Gradle wrapper..."
-          gradle wrapper
-        fi
-        chmod +x gradlew
+          cat << 'EOF' > gradle.properties
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          kotlin.code.style=official
+          android.nonTransitiveRClass=true
+          EOF
 
-        # 2. ترتيب الملفات المرفوعة في مجلد واحد تلقائياً لهيكل أندرويد
-        if [ ! -d "app/src/main" ]; then
-          echo "Organizing files into Android build structure..."
-          mkdir -p app/src/main/java/dz/mesrs/webetu/automeals/{core/security,core/util,core/notifications,data/model,data/local/entity,data/local/dao,data/local/database,data/local/datastore,domain/provider/official,domain/provider/assisted,domain/provider/mock,domain/repository,domain/usecase,domain/scheduler,work,ui/theme,ui}
-          mkdir -p app/src/main/res/values app/src/main/res/drawable app/src/main/res/mipmap-anydpi-v26 app/src/test/java/dz/mesrs/webetu/automeals
+          cat << 'EOF' > app/build.gradle.kts
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+              id("com.google.devtools.ksp")
+          }
 
-          # نسخ ملفات الكود
-          cp -f *MainActivity*.kt app/src/main/java/dz/mesrs/webetu/automeals/ui/MainActivity.kt 2>/dev/null || true
-          cp -f *Theme*.kt app/src/main/java/dz/mesrs/webetu/automeals/ui/theme/Theme.kt 2>/dev/null || true
-          cp -f *App.kt app/src/main/java/dz/mesrs/webetu/automeals/WebetuAutoMealsApp.kt 2>/dev/null || true
-          cp -f *Keystore*.kt app/src/main/java/dz/mesrs/webetu/automeals/core/security/KeystoreSecretManager.kt 2>/dev/null || true
-          cp -f *SecurityAudit*.kt app/src/main/java/dz/mesrs/webetu/automeals/core/security/SecurityAudit.kt 2>/dev/null || true
-          cp -f *TimeUtils*.kt app/src/main/java/dz/mesrs/webetu/automeals/core/util/TimeUtils.kt 2>/dev/null || true
-          cp -f *Result*.kt app/src/main/java/dz/mesrs/webetu/automeals/core/util/Result.kt 2>/dev/null || true
-          cp -f *Notification*.kt app/src/main/java/dz/mesrs/webetu/automeals/core/notifications/MealNotificationManager.kt 2>/dev/null || true
-          cp -f *Enums*.kt app/src/main/java/dz/mesrs/webetu/automeals/data/model/Enums.kt 2>/dev/null || true
-          cp -f *ScheduleSettings*.kt app/src/main/java/dz/mesrs/webetu/automeals/data/model/ScheduleSettings.kt 2>/dev/null || true
-          cp -f *Entity*.kt app/src/main/java/dz/mesrs/webetu/automeals/data/local/entity/BookingAttemptEntity.kt 2>/dev/null || true
-          cp -f *Dao*.kt app/src/main/java/dz/mesrs/webetu/automeals/data/local/dao/BookingAttemptDao.kt 2>/dev/null || true
-          cp -f *Database*.kt app/src/main/java/dz/mesrs/webetu/automeals/data/local/database/AppDatabase.kt 2>/dev/null || true
-          cp -f *DataStore*.kt app/src/main/java/dz/mesrs/webetu/automeals/data/local/datastore/SchedulePreferencesDataStore.kt 2>/dev/null || true
-          cp -f *Official*.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/provider/official/OfficialIntegrationProvider.kt 2>/dev/null || true
-          cp -f *Assisted*.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/provider/assisted/AssistedBookingProvider.kt 2>/dev/null || true
-          cp -f *Mock*.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/provider/mock/MockMealBookingProvider.kt 2>/dev/null || true
-          cp -f *MealBookingProvider*.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/provider/MealBookingProvider.kt 2>/dev/null || true
-          cp -f *BookingRepository*.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/repository/BookingRepository.kt 2>/dev/null || true
-          cp -f *ScheduleSettingsRepository*.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/repository/ScheduleSettingsRepository.kt 2>/dev/null || true
-          cp -f *UseCases*.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/usecase/UseCases.kt 2>/dev/null || true
-          cp -f *SchedulingManager*.kt app/src/main/java/dz/mesrs/webetu/automeals/domain/scheduler/MealSchedulingManager.kt 2>/dev/null || true
-          cp -f *Worker*.kt app/src/main/java/dz/mesrs/webetu/automeals/work/MealBookingWorker.kt 2>/dev/null || true
-          cp -f *Receiver*.kt app/src/main/java/dz/mesrs/webetu/automeals/work/BootReceiver.kt 2>/dev/null || true
-          cp -f *Test*.kt app/src/test/java/dz/mesrs/webetu/automeals/AllTests.kt 2>/dev/null || true
+          android {
+              namespace = "dz.mesrs.webetu.automeals"
+              compileSdk = 34
 
-          # نسخ الموارد والبيان وملف البناء
-          cp -f *AndroidManifest*.xml app/src/main/AndroidManifest.xml 2>/dev/null || true
-          cp -f *colors*.xml app/src/main/res/values/colors.xml 2>/dev/null || true
-          cp -f *strings*.xml app/src/main/res/values/strings.xml 2>/dev/null || true
-          cp -f *themes*.xml app/src/main/res/values/themes.xml 2>/dev/null || true
-          cp -f *ic_launcher*.xml app/src/main/res/drawable/ic_launcher_foreground.xml 2>/dev/null || true
-          cp -f *ic_launcher*.xml app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml 2>/dev/null || true
-          cp -f *app-build*.gradle.kts app/build.gradle.kts 2>/dev/null || cp -f *build.gradle.kts app/build.gradle.kts 2>/dev/null || true
-        fi
+              defaultConfig {
+                  applicationId = "dz.mesrs.webetu.automeals"
+                  minSdk = 26
+                  targetSdk = 34
+                  versionCode = 1
+                  versionName = "1.0.0"
+                  vectorDrawables { useSupportLibrary = true }
+              }
 
-        # 3. بناء وتجميع حزمة الـ APK
-        ./gradlew assembleDebug --no-daemon --stacktrace || gradle assembleDebug --no-daemon --stacktrace
+              buildTypes {
+                  release {
+                      isMinifyEnabled = false
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+              buildFeatures {
+                  compose = true
+              }
+              composeOptions {
+                  kotlinCompilerExtensionVersion = "1.5.14"
+              }
+              packaging {
+                  resources {
+                      excludes += "/META-INF/{AL2.0,LGPL2.1}"
+                  }
+              }
+          }
 
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: WebetuAutoMeals-debug-APK
-        path: app/build/outputs/apk/debug/app-debug.apk
-        if-no-files-found: error
+          dependencies {
+              val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
+              implementation(composeBom)
+              implementation("androidx.core:core-ktx:1.13.1")
+              implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.3")
+              implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.3")
+              implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
+              implementation("androidx.activity:activity-compose:1.9.0")
+              implementation("androidx.compose.ui:ui")
+              implementation("androidx.compose.ui:ui-graphics")
+              implementation("androidx.compose.ui:ui-tooling-preview")
+              implementation("androidx.compose.material3:material3")
+              implementation("androidx.compose.material:material-icons-extended")
+              implementation("androidx.navigation:navigation-compose:2.7.7")
+              implementation("androidx.work:work-runtime-ktx:2.9.0")
+              implementation("androidx.datastore:datastore-preferences:1.1.1")
+              implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+              val roomVersion = "2.6.1"
+              implementation("androidx.room:room-runtime:$roomVersion")
+              implementation("androidx.room:room-ktx:$roomVersion")
+              ksp("androidx.room:room-compiler:$roomVersion")
+
+              implementation("com.squareup.okhttp3:okhttp:4.12.0")
+              implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+              implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+          }
+          EOF
+
+          [ -f *AndroidManifest*.xml ] && cp -f *AndroidManifest*.xml app/src/main/AndroidManifest.xml || true
+          [ -f *strings*.xml ] && cp -f *strings*.xml app/src/main/res/values/strings.xml || true
+          [ -f *network_security_config*.xml ] && cp -f *network_security_config*.xml app/src/main/res/xml/network_security_config.xml || true
+          [ -f *MainActivity*.kt ] && cp -f *MainActivity*.kt "$PKG/MainActivity.kt" || true
+          [ -f *WebetuAutoMealsApp*.kt ] && cp -f *WebetuAutoMealsApp*.kt "$PKG/WebetuAutoMealsApp.kt" || true
+          [ -f *StudentCredentials*.kt ] && cp -f *StudentCredentials*.kt "$PKG/domain/model/StudentCredentials.kt" || true
+          [ -f *BookingLog*.kt ] && cp -f *BookingLog*.kt "$PKG/domain/model/BookingLog.kt" || true
+          [ -f *CredentialsRepository*.kt ] && cp -f *CredentialsRepository*.kt "$PKG/domain/repository/CredentialsRepository.kt" || true
+          [ -f *BookingLogRepository*.kt ] && cp -f *BookingLogRepository*.kt "$PKG/domain/repository/BookingLogRepository.kt" || true
+          [ -f *AppDatabase*.kt ] && cp -f *AppDatabase*.kt "$PKG/data/local/AppDatabase.kt" || true
+          [ -f *BookingLogDao*.kt ] && cp -f *BookingLogDao*.kt "$PKG/data/local/BookingLogDao.kt" || true
+          [ -f *BookingLogEntity*.kt ] && cp -f *BookingLogEntity*.kt "$PKG/data/local/BookingLogEntity.kt" || true
+          [ -f *EncryptedCredentialsStore*.kt ] && cp -f *EncryptedCredentialsStore*.kt "$PKG/data/local/EncryptedCredentialsStore.kt" || true
+          [ -f *ScheduleSettingsDataStore*.kt ] && cp -f *ScheduleSettingsDataStore*.kt "$PKG/data/local/ScheduleSettingsDataStore.kt" || true
+          [ -f *MockMealBookingProvider*.kt ] && cp -f *MockMealBookingProvider*.kt "$PKG/data/remote/MockMealBookingProvider.kt" || true
+          [ -f *WebetuHttpMealBookingProvider*.kt ] && cp -f *WebetuHttpMealBookingProvider*.kt "$PKG/data/remote/WebetuHttpMealBookingProvider.kt" || true
+          [ -f *BookingLogRepositoryImpl*.kt ] && cp -f *BookingLogRepositoryImpl*.kt "$PKG/data/repository/BookingLogRepositoryImpl.kt" || true
+          [ -f *MealBookingWorker*.kt ] && cp -f *MealBookingWorker*.kt "$PKG/worker/MealBookingWorker.kt" || true
+          [ -f *WorkScheduler*.kt ] && cp -f *WorkScheduler*.kt "$PKG/worker/WorkScheduler.kt" || true
+          [ -f *Theme*.kt ] && cp -f *Theme*.kt "$PKG/ui/theme/Theme.kt" || true
+          [ -f *MainViewModel*.kt ] && cp -f *MainViewModel*.kt "$PKG/ui/MainViewModel.kt" || true
+          [ -f *MainScreen*.kt ] && cp -f *MainScreen*.kt "$PKG/ui/screens/MainScreen.kt" || true
+
+          [ -f "$PKG/WebetuAutoMealsApp.kt" ] && sed -i 's/; private set//g' "$PKG/WebetuAutoMealsApp.kt" || true
+          [ -f app/src/main/AndroidManifest.xml ] && sed -i 's/@mipmap\/ic_launcher/@android:drawable\/sym_def_app_icon/g' app/src/main/AndroidManifest.xml || true
+
+          cat << 'EOF' > "$PKG/domain/model/Enums.kt"
+          package dz.mesrs.webetu.automeals.domain.model
+
+          enum class MealType(val labelAr: String, val code: String) {
+              BREAKFAST("فطور الصباح", "BREAKFAST"),
+              LUNCH("وجبة الغداء", "LUNCH"),
+              DINNER("وجبة العشاء", "DINNER");
+
+              companion object {
+                  fun fromCode(code: String): MealType = entries.find { it.code == code } ?: LUNCH
+              }
+          }
+
+          enum class BookingStatus(val labelAr: String) {
+              SUCCESS("ناجح"),
+              FAILED("فشل"),
+              ALREADY_BOOKED("محجوز مسبقا"),
+              PENDING("قيد الانتظار")
+          }
+          EOF
+
+          cat << 'EOF' > "$PKG/domain/model/ScheduleSettings.kt"
+          package dz.mesrs.webetu.automeals.domain.model
+
+          import java.time.DayOfWeek
+
+          data class ScheduleSettings(
+              val isAutoBookingEnabled: Boolean = false,
+              val executionHour: Int = 8,
+              val executionMinute: Int = 0,
+              val selectedMeals: Set<MealType> = setOf(MealType.LUNCH, MealType.DINNER),
+              val activeDays: Set<DayOfWeek> = setOf(
+                  DayOfWeek.SUNDAY,
+                  DayOfWeek.MONDAY,
+                  DayOfWeek.TUESDAY,
+                  DayOfWeek.WEDNESDAY,
+                  DayOfWeek.THURSDAY
+              ),
+              val retryOnFailure: Boolean = true,
+              val notificationsEnabled: Boolean = true,
+              val useDemoMode: Boolean = true
+          )
+          EOF
+
+          cat << 'EOF' > "$PKG/domain/model/Result.kt"
+          package dz.mesrs.webetu.automeals.domain.model
+
+          data class BookingExecutionResult(
+              val mealType: MealType,
+              val status: BookingStatus,
+              val message: String,
+              val referenceCode: String? = null
+          )
+          EOF
+
+          cat << 'EOF' > "$PKG/domain/repository/ScheduleSettingsRepository.kt"
+          package dz.mesrs.webetu.automeals.domain.repository
+
+          import dz.mesrs.webetu.automeals.domain.model.ScheduleSettings
+          import kotlinx.coroutines.flow.Flow
+
+          interface ScheduleSettingsRepository {
+              val settingsFlow: Flow<ScheduleSettings>
+              suspend fun updateSettings(settings: ScheduleSettings)
+              suspend fun getSettingsSnapshot(): ScheduleSettings
+          }
+          EOF
+
+          cat << 'EOF' > "$PKG/domain/repository/MealBookingProvider.kt"
+          package dz.mesrs.webetu.automeals.domain.repository
+
+          import dz.mesrs.webetu.automeals.domain.model.BookingExecutionResult
+          import dz.mesrs.webetu.automeals.domain.model.MealType
+          import dz.mesrs.webetu.automeals.domain.model.StudentCredentials
+          import java.time.LocalDate
+
+          interface MealBookingProvider {
+              suspend fun bookMeal(
+                  credentials: StudentCredentials,
+                  mealType: MealType,
+                  targetDate: LocalDate
+              ): BookingExecutionResult
+          }
+          EOF
+
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <style name="Theme.WebetuAutoMeals" parent="android:Theme.Material.Light.NoActionBar" />\n</resources>\n' > app/src/main/res/values/themes.xml
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Accept Android SDK licenses and install SDK 34
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(find "${ANDROID_HOME}" -name sdkmanager -type f | head -n 1)
+          fi
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: "8.7"
+
+      - name: Build debug APK
+        run: gradle assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: WebetuAutoMeals-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
